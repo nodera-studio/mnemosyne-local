@@ -1,0 +1,378 @@
+{
+  "version": 2,
+  "k": 10,
+  "changelog": [
+    "2026-07-21: PLACEHOLDER template for the public repo (APPROVED for shipping as an illustrative example only — this is NOT a real reviewed gold set). The original gold set scored a private production memory corpus with real UUIDs from a live memory-mcp database — none of that is reproducible (or appropriate) to ship publicly, since gold ids only mean anything against the exact corpus they were written for. These 32 rows exist purely to satisfy the v2 schema contract (id/query/relevantIds/archetype/split/provenance/approvedBy) and let the conformance suite + harness tooling run out of the box; every relevantIds UUID below is a placeholder that will not resolve to anything in a fresh database, so pool Recall@25 / nDCG@10 will read as 0 against a real corpus until you replace this file.",
+    "2026-07-21: Replace this file with your own gold set once you've stored real memories: seed a handful by hand (provenance \"seed-v1\"), then grow it over time via `npm run gold:migrate` / `npm run distill-eval -- --yes` / the monthly `npm run harvest-eval` — see test/eval.md's \"Gold lifecycle\" section. Once you have a real reviewed set, freeze a genuine test split (never recomputed casually) per the dev/test policy in test/eval.md, AC-109."
+  ],
+  "rows": [
+    {
+      "id": "m-001",
+      "query": "example query — what does row 001 illustrate about the schema",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000010"
+      ],
+      "archetype": "exact-fact",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-002",
+      "query": "example query — a conceptual where-does-X-live question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000020",
+        "00000000-0000-0000-0000-000000000021"
+      ],
+      "archetype": "conceptual-where-how",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-003",
+      "query": "example query — a decision-recall question about a past choice",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000030"
+      ],
+      "archetype": "decision-recall",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-004",
+      "query": "example query — a how-do-I procedural question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000040",
+        "00000000-0000-0000-0000-000000000041"
+      ],
+      "archetype": "procedural",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-005",
+      "query": "example query — what does row 005 illustrate about the schema",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000050"
+      ],
+      "archetype": "exact-fact",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-006",
+      "query": "example query — a conceptual where-does-X-live question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000060",
+        "00000000-0000-0000-0000-000000000061"
+      ],
+      "archetype": "conceptual-where-how",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-007",
+      "query": "example query — a decision-recall question about a past choice",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000070"
+      ],
+      "archetype": "decision-recall",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-008",
+      "query": "example query — a how-do-I procedural question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000080",
+        "00000000-0000-0000-0000-000000000081"
+      ],
+      "archetype": "procedural",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-009",
+      "query": "example query — what does row 009 illustrate about the schema",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000090"
+      ],
+      "archetype": "exact-fact",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-010",
+      "query": "example query — a conceptual where-does-X-live question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000100",
+        "00000000-0000-0000-0000-000000000101"
+      ],
+      "archetype": "conceptual-where-how",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-011",
+      "query": "example query — a decision-recall question about a past choice",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000110"
+      ],
+      "archetype": "decision-recall",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-012",
+      "query": "example query — a how-do-I procedural question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000120",
+        "00000000-0000-0000-0000-000000000121"
+      ],
+      "archetype": "procedural",
+      "split": "test",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-013",
+      "query": "example query — what does row 013 illustrate about the schema",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000130"
+      ],
+      "archetype": "exact-fact",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-014",
+      "query": "example query — a conceptual where-does-X-live question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000140",
+        "00000000-0000-0000-0000-000000000141"
+      ],
+      "archetype": "conceptual-where-how",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-015",
+      "query": "example query — a decision-recall question about a past choice",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000150"
+      ],
+      "archetype": "decision-recall",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-016",
+      "query": "example query — a how-do-I procedural question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000160",
+        "00000000-0000-0000-0000-000000000161"
+      ],
+      "archetype": "procedural",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-017",
+      "query": "example query — what does row 017 illustrate about the schema",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000170"
+      ],
+      "archetype": "exact-fact",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-018",
+      "query": "example query — a conceptual where-does-X-live question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000180",
+        "00000000-0000-0000-0000-000000000181"
+      ],
+      "archetype": "conceptual-where-how",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-019",
+      "query": "example query — a decision-recall question about a past choice",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000190"
+      ],
+      "archetype": "decision-recall",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-020",
+      "query": "example query — a how-do-I procedural question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000200",
+        "00000000-0000-0000-0000-000000000201"
+      ],
+      "archetype": "procedural",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-021",
+      "query": "example query — what does row 021 illustrate about the schema",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000210"
+      ],
+      "archetype": "exact-fact",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-022",
+      "query": "example query — a conceptual where-does-X-live question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000220",
+        "00000000-0000-0000-0000-000000000221"
+      ],
+      "archetype": "conceptual-where-how",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-023",
+      "query": "example query — a decision-recall question about a past choice",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000230"
+      ],
+      "archetype": "decision-recall",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-024",
+      "query": "example query — a how-do-I procedural question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000240",
+        "00000000-0000-0000-0000-000000000241"
+      ],
+      "archetype": "procedural",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-025",
+      "query": "example query — what does row 025 illustrate about the schema",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000250"
+      ],
+      "archetype": "exact-fact",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-026",
+      "query": "example query — a conceptual where-does-X-live question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000260",
+        "00000000-0000-0000-0000-000000000261"
+      ],
+      "archetype": "conceptual-where-how",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-027",
+      "query": "example query — a decision-recall question about a past choice",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000270"
+      ],
+      "archetype": "decision-recall",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-028",
+      "query": "example query — a how-do-I procedural question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000280",
+        "00000000-0000-0000-0000-000000000281"
+      ],
+      "archetype": "procedural",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-029",
+      "query": "example query — what does row 029 illustrate about the schema",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000290"
+      ],
+      "archetype": "exact-fact",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-030",
+      "query": "example query — a conceptual where-does-X-live question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000300",
+        "00000000-0000-0000-0000-000000000301"
+      ],
+      "archetype": "conceptual-where-how",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-031",
+      "query": "example query — a decision-recall question about a past choice",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000310"
+      ],
+      "archetype": "decision-recall",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "m-032",
+      "query": "example query — a how-do-I procedural question",
+      "relevantIds": [
+        "00000000-0000-0000-0000-000000000320",
+        "00000000-0000-0000-0000-000000000321"
+      ],
+      "archetype": "procedural",
+      "split": "dev",
+      "provenance": "example",
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    }
+  ]
+}

@@ -1,0 +1,633 @@
+{
+  "version": 2,
+  "_seed": false,
+  "_note": "SEED GOLD EVAL SET (G0, AC-109) over this repo's own indexed source tree (services/memory-mcp, services/codebase-mcp, services/secrets-mcp). Each row is query -> relevant FILE PATH(s); a hit on ANY relevant path in the top-k counts as recall. Paths are matched case-insensitively (leading ./ stripped) by the scorer. Labels are CANONICAL paths only — never `.claude/worktrees/**` duplicates. The test split is spent only by flip gates.",
+  "_archetypes": "where-is-X (subsystem location), how-do-we-X (mechanism), symbol-lookup (named function/type), route->handler trace, cross-file usage. The `archetype` field on each row is informational only (the loader ignores it).",
+  "changelog": [
+    "2026-07-03: v2 — rows gain stable id (c-001..c-052), split (all \"dev\"; operator promotes ~1/3 to \"test\" at G0 and freezes it — the test split is modified only by flip gates, AC-109) and provenance (seed-v1, from the _seed flag). Paths remain the stable ID for code (chunk ids churn on every reindex).",
+    "2026-07-03: G0 curation — all 52 seed rows' relevantPaths verified to exist by exact match in codebase.files.",
+    "2026-07-03: c-001 — sibling auth.ts added (memory-mcp, secrets-mcp: near-identical requireBearer) + query scoped to 'MCP services' (this repo indexes only its own three MCP services).",
+    "2026-07-03: c-002 — memory-mcp cfAccess.ts added (byte-identical file).",
+    "2026-07-03: c-003 — sibling origin.ts added (memory-mcp byte-identical, secrets-mcp comment-only diff).",
+    "2026-07-03: c-004 — sibling db/pool.ts added (memory-mcp identical, secrets-mcp max-size-only diff).",
+    "2026-07-03: c-005 — memory-mcp db/migrate.ts added (near-identical startup migration runner).",
+    "2026-07-03: c-006 — memory-mcp voyage.ts added (same 429-retry Voyage client).",
+    "2026-07-03: c-012 — query scoped to 'codebase MCP' (all three MCP servers register tools; server.ts bodies diverge, so scoping keeps the row discriminative).",
+    "2026-07-03: c-014 — query scoped to the codebase MCP service (three sibling config.ts with divergent bodies).",
+    "2026-07-03: c-016 — memory-mcp voyage.ts added (same toVectorLiteral serializer).",
+    "2026-07-03: c-020 — query scoped to the Voyage client + memory-mcp voyage.ts added (identical backoff).",
+    "2026-07-03: c-025 — query scoped to the CODE embedder bake-off (memory-mcp carries a sibling recall/MRR helper for its own gate).",
+    "2026-07-03: c-032 — memory-mcp voyage.ts added (defines the same toVectorLiteral symbol).",
+    "2026-07-03: c-033 — sibling config.ts added (assertServerConfig defined in all three services).",
+    "2026-07-03: c-034 — query fixed: the symbol is requireBearer (verifyBearer never existed); sibling auth.ts added (defined in all three services).",
+    "2026-07-03: c-035 — query scoped to Voyage (memory-mcp shares the same rerank export).",
+    "2026-07-03: c-042 — query scoped to 'codebase MCP' (origin.ts is identical across the three services; the server.ts wiring target stays discriminative).",
+    "2026-07-03: c-043 — query scoped to CODE search (memory-mcp shares the CANDIDATE_POOL env/config name).",
+    "2026-07-03: c-045 — query scoped to the code chunk column (memory-mcp sql also defines halfvec(1024) columns).",
+    "2026-07-03: c-049 — sql/005_drop_bakeoff_scratch.sql added (create + drop are both 'the bake-off scratch embedding column migration').",
+    "2026-07-03: c-052 — memory-mcp db/create-decision-index.ts added (same concurrent-HNSW-outside-the-batch-runner pattern).",
+    "2026-07-21: sanitized for the public template repo — the original 15 'distilled' rows (c-053..c-067) scored a private downstream product's codebase and were removed along with every cross-project reference in this changelog and _note. The remaining 52 seed-v1 rows score ONLY this repo's own services/ tree, so they work out of the box against a fresh clone + index — no other corpus required. Grow your own gold set for your own codebase via the distill/harvest workflow in test/eval.md."
+  ],
+  "k": 10,
+  "rows": [
+    {
+      "id": "c-001",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "where is bearer token authentication handled in the MCP services",
+      "relevantPaths": [
+        "services/codebase-mcp/src/auth.ts",
+        "services/memory-mcp/src/auth.ts",
+        "services/secrets-mcp/src/auth.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-002",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "how do we verify Cloudflare Access JWT assertions",
+      "relevantPaths": [
+        "services/codebase-mcp/src/cfAccess.ts",
+        "services/memory-mcp/src/cfAccess.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-003",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "DNS rebinding origin allowlist guard",
+      "relevantPaths": [
+        "services/codebase-mcp/src/origin.ts",
+        "services/memory-mcp/src/origin.ts",
+        "services/secrets-mcp/src/origin.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-004",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "where is the postgres connection pool created in the MCP services",
+      "relevantPaths": [
+        "services/codebase-mcp/src/db/pool.ts",
+        "services/memory-mcp/src/db/pool.ts",
+        "services/secrets-mcp/src/db/pool.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-005",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "where are SQL migrations applied at startup",
+      "relevantPaths": [
+        "services/codebase-mcp/src/db/migrate.ts",
+        "services/memory-mcp/src/db/migrate.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-006",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "voyage embeddings client with retry on 429",
+      "relevantPaths": [
+        "services/codebase-mcp/src/voyage.ts",
+        "services/memory-mcp/src/voyage.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-007",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "hybrid code search RRF fusion and rerank",
+      "relevantPaths": [
+        "services/codebase-mcp/src/search.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-008",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "the repository indexer that walks files and embeds chunks",
+      "relevantPaths": [
+        "services/codebase-mcp/src/indexer.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-009",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "sliding window code chunker",
+      "relevantPaths": [
+        "services/codebase-mcp/src/chunker.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-010",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "tree-sitter symbol and edge extraction",
+      "relevantPaths": [
+        "services/codebase-mcp/src/graph/extractor.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-011",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "graph traversal expanding symbol edges",
+      "relevantPaths": [
+        "services/codebase-mcp/src/graph/traverse.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-012",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "codebase MCP tool registration and HTTP server entrypoint",
+      "relevantPaths": [
+        "services/codebase-mcp/src/server.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-013",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "formatting index run status for display",
+      "relevantPaths": [
+        "services/codebase-mcp/src/status-format.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-014",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "where-is-X",
+      "query": "environment-driven configuration object for the codebase MCP service",
+      "relevantPaths": [
+        "services/codebase-mcp/src/config.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-015",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how do we skip unchanged files during reindex",
+      "relevantPaths": [
+        "services/codebase-mcp/src/indexer.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-016",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how do we serialize a vector into a halfvec literal",
+      "relevantPaths": [
+        "services/codebase-mcp/src/voyage.ts",
+        "services/memory-mcp/src/voyage.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-017",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how do we hold a per-repo advisory lock during indexing",
+      "relevantPaths": [
+        "services/codebase-mcp/src/indexer.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-018",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how do we resolve by-name call edges after the walk",
+      "relevantPaths": [
+        "services/codebase-mcp/src/indexer.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-019",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how do we batch embed chunks in groups of 64",
+      "relevantPaths": [
+        "services/codebase-mcp/src/indexer.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-020",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how does the Voyage client retry backoff honor the Retry-After header",
+      "relevantPaths": [
+        "services/codebase-mcp/src/voyage.ts",
+        "services/memory-mcp/src/voyage.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-021",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how do we guess a symbol name from a chunk",
+      "relevantPaths": [
+        "services/codebase-mcp/src/chunker.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-022",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how do we map file extensions to languages",
+      "relevantPaths": [
+        "services/codebase-mcp/src/chunker.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-023",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how do we cancel an in-flight index run cooperatively",
+      "relevantPaths": [
+        "services/codebase-mcp/src/indexer.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-024",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how do we run the contextual embedding bake-off scratch re-embed",
+      "relevantPaths": [
+        "services/codebase-mcp/src/db/bakeoff-embed.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-025",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "how-do-we-X",
+      "query": "how is recall at k and MRR computed for the code embedder bake-off gate",
+      "relevantPaths": [
+        "services/codebase-mcp/src/recall-math.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-026",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "embedCode function",
+      "relevantPaths": [
+        "services/codebase-mcp/src/voyage.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-027",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "embedCodeContextual contextualized embeddings",
+      "relevantPaths": [
+        "services/codebase-mcp/src/voyage.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-028",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "searchCode",
+      "relevantPaths": [
+        "services/codebase-mcp/src/search.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-029",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "indexRepo",
+      "relevantPaths": [
+        "services/codebase-mcp/src/indexer.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-030",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "chunkFile",
+      "relevantPaths": [
+        "services/codebase-mcp/src/chunker.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-031",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "extractGraph",
+      "relevantPaths": [
+        "services/codebase-mcp/src/graph/extractor.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-032",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "toVectorLiteral",
+      "relevantPaths": [
+        "services/codebase-mcp/src/voyage.ts",
+        "services/memory-mcp/src/voyage.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-033",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "assertServerConfig",
+      "relevantPaths": [
+        "services/codebase-mcp/src/config.ts",
+        "services/memory-mcp/src/config.ts",
+        "services/secrets-mcp/src/config.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-034",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "requireBearer token check",
+      "relevantPaths": [
+        "services/codebase-mcp/src/auth.ts",
+        "services/memory-mcp/src/auth.ts",
+        "services/secrets-mcp/src/auth.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-035",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "Voyage rerank documents against a query",
+      "relevantPaths": [
+        "services/codebase-mcp/src/voyage.ts",
+        "services/memory-mcp/src/voyage.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-036",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "bakeoffEmbedContextual scratch embedder",
+      "relevantPaths": [
+        "services/codebase-mcp/src/db/bakeoff-embed.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-037",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "symbol-lookup",
+      "query": "scoreArm per-arm recall scoring",
+      "relevantPaths": [
+        "services/codebase-mcp/src/db/bakeoff-embed.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-038",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "route-to-handler",
+      "query": "the code_search MCP tool wiring to searchCode",
+      "relevantPaths": [
+        "services/codebase-mcp/src/server.ts",
+        "services/codebase-mcp/src/search.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-039",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "route-to-handler",
+      "query": "code_reindex tool spawning the indexer",
+      "relevantPaths": [
+        "services/codebase-mcp/src/server.ts",
+        "services/codebase-mcp/src/indexer.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-040",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "route-to-handler",
+      "query": "code_graph_expand tool calling graph traversal",
+      "relevantPaths": [
+        "services/codebase-mcp/src/server.ts",
+        "services/codebase-mcp/src/graph/traverse.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-041",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "route-to-handler",
+      "query": "code_index_status tool reading index_runs",
+      "relevantPaths": [
+        "services/codebase-mcp/src/server.ts",
+        "services/codebase-mcp/src/status-format.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-042",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "route-to-handler",
+      "query": "codebase MCP request origin validation before handling MCP calls",
+      "relevantPaths": [
+        "services/codebase-mcp/src/origin.ts",
+        "services/codebase-mcp/src/server.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-043",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "where is the candidate pool config used by code search",
+      "relevantPaths": [
+        "services/codebase-mcp/src/search.ts",
+        "services/codebase-mcp/src/config.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-044",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "which code reads VOYAGE_CODE_MODEL",
+      "relevantPaths": [
+        "services/codebase-mcp/src/config.ts",
+        "services/codebase-mcp/src/voyage.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-045",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "where the code chunk embedding halfvec 1024 column is defined and written",
+      "relevantPaths": [
+        "services/codebase-mcp/sql/001_codebase.sql",
+        "services/codebase-mcp/src/indexer.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-046",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "code_chunks table schema with tsvector and hnsw index",
+      "relevantPaths": [
+        "services/codebase-mcp/sql/001_codebase.sql"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-047",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "symbol graph unique constraints migration",
+      "relevantPaths": [
+        "services/codebase-mcp/sql/003_graph_constraints.sql"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-048",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "index_runs observability table migration",
+      "relevantPaths": [
+        "services/codebase-mcp/sql/002_index_jobs.sql"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-049",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "bake-off scratch embedding column migration",
+      "relevantPaths": [
+        "services/codebase-mcp/sql/004_bakeoff_scratch.sql",
+        "services/codebase-mcp/sql/005_drop_bakeoff_scratch.sql"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-050",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "memory-mcp blue green contextual embedding backfill",
+      "relevantPaths": [
+        "services/memory-mcp/src/db/backfill-context.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-051",
+      "split": "test",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "memory search hybrid rrf and relevance blend",
+      "relevantPaths": [
+        "services/memory-mcp/src/memory.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    },
+    {
+      "id": "c-052",
+      "split": "dev",
+      "provenance": "seed-v1",
+      "archetype": "cross-file-usage",
+      "query": "concurrent HNSW index build outside the batch runner",
+      "relevantPaths": [
+        "services/memory-mcp/src/db/create-v2-index.ts",
+        "services/memory-mcp/src/db/create-decision-index.ts"
+      ],
+      "approvedBy": "template/example — not a real reviewer sign-off"
+    }
+  ]
+}

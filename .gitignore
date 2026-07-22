@@ -1,0 +1,37 @@
+# secrets — generated on the box, never committed
+.env
+secrets/
+
+# node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# logs / scratch
+*.log
+.DS_Store
+
+# claude code worktrees + local agent scratch (worktrees live here)
+.claude/
+
+# db dumps / canonical tarballs
+backups/
+
+# cloudflare tunnel credentials + origin cert (out-of-band, never commit)
+cloudflared/*.json
+cloudflared/cert.pem
+
+# compose backups
+compose.yaml.bak.*
+
+# oauth signing material (mnemo-auth, Phase 2)
+*.jwk
+keys/
+
+# importer scratch / input data — imported transcripts, obsidian vault, distill
+# inputs. Source-of-truth lives in Postgres after import; these are machine-local
+# and contain sensitive material (settings.local.json, Production-Env.md, threads).
+consolidated/
+distill-src/
+import-src/
+services/importer/condensed/

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Mnemosyne pre-commit secret guard — dependency-free.
+# Prefers gitleaks if present; otherwise greps staged content for high-signal
+# credential patterns. Blocks the commit on any hit. Never bypass with --no-verify.
+set -euo pipefail
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --no-banner
+  exit $?
+fi
+
+# Fallback: scan staged additions only (not context lines) for secret values.
+# Patterns target real values, not the literal placeholders in .env.example / docs.
+staged=$(git diff --cached --diff-filter=ACM -U0 | grep -E '^\+' | grep -vE '^\+\+\+') || true
+[ -z "$staged" ] && exit 0
+
+# Allow templated placeholders (e.g. __set_on_box__, example.com, <...>, ${...}).
+violations=$(printf '%s\n' "$staged" | grep -nEi \
+  -e 'TUNNEL_TOKEN=[A-Za-z0-9._-]{20,}' \
+  -e 'SECRETS_MASTER_KEY=[A-Za-z0-9+/=]{16,}' \
+  -e 'POSTGRES_PASSWORD=[A-Za-z0-9]{12,}' \
+  -e 'REDIS_PASSWORD=[A-Za-z0-9]{12,}' \
+  -e 'VOYAGE_API_KEY=[A-Za-z0-9-]{16,}' \
+  -e 'BEGIN ([A-Z]+ )?PRIVATE KEY' \
+  | grep -vEi '__set_on_box__|example\.com|your-|<[^>]+>|\$\{' ) || true
+
+if [ -n "$violations" ]; then
+  echo "✖ pre-commit: possible secret in staged changes — commit blocked:" >&2
+  printf '%s\n' "$violations" >&2
+  echo "If this is a false positive, sanitize the value or use a placeholder. Never use --no-verify." >&2
+  exit 1
+fi
+exit 0

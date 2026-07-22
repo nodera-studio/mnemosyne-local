@@ -1,0 +1,300 @@
+name: mnemosyne
+
+# Data layer for Mnemosyne (Postgres+pgvector, Redis), local-only. MCP servers +
+# indexer run alongside; no remote ingress — everything is published to host
+# loopback (127.0.0.1) only, for use by Claude Code running on the same machine
+# (or reachable over your own LAN/Tailscale).
+#
+# Security model: DB/cache live on an internal-only network and are published
+# ONLY to host loopback (127.0.0.1) for admin/migrations — never to 0.0.0.0.
+# There is no tunnel/remote-ingress path here by design; put a tunnel or
+# reverse-proxy of your own choice in front of it if you need remote access.
+
+x-restart: &restart
+  restart: unless-stopped
+
+networks:
+  backend:
+    internal: true        # no egress; DB/cache isolated
+  edge: {}                # mcp servers (memory/codebase/secrets) + langfuse egress/host-loopback publish
+
+volumes:
+  pgdata: {}
+  redisdata: {}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    <<: *restart
+    shm_size: "1g"                       # default 64MB breaks parallel/large queries
+    command:
+      - postgres
+      - -c
+      - listen_addresses=*
+      # --- memory (128GB box, shared with other services) ---
+      - -c
+      - shared_buffers=32GB
+      - -c
+      - effective_cache_size=96GB
+      - -c
+      - work_mem=128MB
+      - -c
+      - maintenance_work_mem=4GB
+      - -c
+      - hash_mem_multiplier=2.0
+      # --- parallelism (14C/20T) ---
+      - -c
+      - max_worker_processes=20
+      - -c
+      - max_parallel_workers=14
+      - -c
+      - max_parallel_workers_per_gather=4
+      - -c
+      - max_parallel_maintenance_workers=4
+      # --- I/O (Gen4 NVMe) ---
+      - -c
+      - effective_io_concurrency=200
+      - -c
+      - maintenance_io_concurrency=200
+      - -c
+      - random_page_cost=1.1
+      # --- WAL / checkpoints ---
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_size=16GB
+      - -c
+      - min_wal_size=2GB
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - checkpoint_timeout=15min
+      - -c
+      - wal_compression=zstd
+      - -c
+      - synchronous_commit=on            # non-ECC single box: keep durable
+      # --- planner / misc ---
+      - -c
+      - default_statistics_target=200
+      - -c
+      - jit=off
+      - -c
+      - max_connections=200
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env}
+      POSTGRES_INITDB_ARGS: "--data-checksums"   # extra corruption detection (non-ECC box)
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5432:5432"            # loopback ONLY (host-side psql/migrations)
+    networks: [backend, edge]   # edge enables host-loopback publish (DBeaver + migrations/importer); Postgres makes no outbound calls
+    mem_limit: 96g
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    <<: *restart
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?set in .env}
+      - --maxmemory
+      - 2gb
+      - --maxmemory-policy
+      - allkeys-lru               # pure cache (rerank + query-embedding); evict freely
+      - --save
+      - ""                         # no RDB snapshots (cache is reproducible)
+      - --appendonly
+      - "no"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set in .env}
+    volumes:
+      - redisdata:/data
+    ports:
+      - "127.0.0.1:6379:6379"      # loopback ONLY
+    networks: [backend]
+    mem_limit: 3g
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  memory-mcp:
+    build: ./services/memory-mcp
+    <<: *restart
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY:?set in .env}
+      VOYAGE_EMBED_MODEL: ${VOYAGE_EMBED_MODEL:-voyage-4-large}    # legacy embed() model (burn-in)
+      # HARD-PINNED (not .env-overridable): the contextual model is coupled to the
+      # embedding_v2 column contents — a per-box override silently mismatches the
+      # query-vs-corpus embedders (this exact drift shipped a context-3 backfill after
+      # the context-4 code swap). Changing this pin REQUIRES a full column re-embed
+      # (backfill:context) + REINDEX (docs/Runbooks-CodeGraph-ContextEmbeddings.md).
+      VOYAGE_CONTEXT_MODEL: voyage-context-4
+      # HARD-PINNED per the wave-6 bakeoff decision (test/bakeoff.md, 2026-07-04):
+      # rerank-2.5 over rerank-2.5-lite (no-regression gate, AC-502). FROZEN for the
+      # wave-7 blend bakeoff. Rollback = repin rerank-2.5-lite + re-record baselines.
+      VOYAGE_RERANK_MODEL: rerank-2.5
+      # Primarily operator-script inputs (distill-eval / consolidate / backfill:summaries,
+      # waves 2/5) — optional, NOT part of assertServerConfig. The LIVE server also reads
+      # ANTHROPIC_API_KEY for write-time summarization (src/summarize.ts), but ONLY when
+      # SUMMARIZE_ON_STORE=1 below is ALSO set (double gate) — the key alone never spends
+      # on memory_store.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      CONSOLIDATE_MODEL: ${CONSOLIDATE_MODEL:-}
+      # Write-time summary gate (wave-2 token-efficiency): summaries on memory_store
+      # ONLY when this is "1" AND the key above is set — the key alone must never
+      # start spending (the backfill:summaries operator script is the intended
+      # population path). Optional, default off.
+      SUMMARIZE_ON_STORE: ${SUMMARIZE_ON_STORE:-}
+      MNEMO_TOKEN: ${MNEMO_TOKEN:-}
+      DEFAULT_PROJECT_ID: ${DEFAULT_PROJECT_ID:-default}
+      PORT: "8080"
+      CANDIDATE_POOL: "25"
+      # ── Wave-7 blend/decay pins (memory-mcp ONLY — codebase-mcp scoring untouched) ──
+      # The bakeoff winner ships HERE as env pins; code defaults stay A0 (additive
+      # 0.7/0.2/0.1, exp, τ30, nothing exempt), so rollback = delete the pins.
+      # Applied by the OPERATOR only after: (1) `npm run bakeoff:blend -- --yes` on the
+      # dev split picks a winner, (2) ONE predeclared confirmation on the frozen test
+      # split (`--split test --arms A0,<winner>`) passes — the recorded flip gate.
+      # Decision record: services/memory-mcp/test/retune.md (wave-7 section).
+      # Available keys (defaults in src/config.ts; invalid values throw at startup):
+      #   BLEND_FORM: multiplicative                 # additive | multiplicative
+      #   BLEND_W_RELEVANCE: "0.7"
+      #   BLEND_W_RECENCY: "0.2"
+      #   BLEND_W_IMPORTANCE: "0.1"
+      #   DECAY_SHAPE: power                         # exp | power
+      #   RECENCY_TAU_DAYS: "30"                     # τ = 1/e constant, NOT half-life
+      #   DECAY_POWER_EXPONENT: "0.5"
+      #   RECENCY_TAU_DAYS_BY_TYPE: '{"semantic":90,"procedural":90}'
+      #   DECAY_EXEMPT: 'type:entity,source_kind:decision'
+      #   RRF_K pin note: a non-60 k winner would require exposing RRF_K as an env key
+      #   first (per the wave-7 DoD it becomes a retrievalConfig-serialized env pin ONLY
+      #   if a non-60 k is confirmed on the frozen test split).
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      CF_ACCESS_TEAM_DOMAIN: ${CF_ACCESS_TEAM_DOMAIN:-}
+      CF_ACCESS_AUD: ${CF_ACCESS_AUD:-}
+    ports:
+      - "127.0.0.1:8080:8080"        # host-side Claude Code reaches it here
+    networks: [backend, edge]         # backend=Postgres, edge=egress to Voyage
+    mem_limit: 1g
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:8080/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  codebase-mcp:
+    build: ./services/codebase-mcp
+    <<: *restart
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY:?set in .env}
+      VOYAGE_CODE_MODEL: ${VOYAGE_CODE_MODEL:-voyage-code-3}   # code embedder (Wave 5 bake-off flips this)
+      VOYAGE_CODE_CONTEXT_MODEL: ${VOYAGE_CODE_CONTEXT_MODEL:-voyage-context-3}   # Wave 5 bake-off contextual arm (scratch only)
+      # HARD-PINNED per the wave-6 bakeoff decision (test/bakeoff.md, 2026-07-04) —
+      # see the memory-mcp block for rationale; FROZEN for wave-7.
+      VOYAGE_RERANK_MODEL: rerank-2.5
+      MNEMO_TOKEN: ${MNEMO_TOKEN:-}
+      DEFAULT_PROJECT_ID: ${DEFAULT_PROJECT_ID:-default}
+      PORT: "8081"
+      REPOS_ROOT: /repos
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      CF_ACCESS_AUD: ${CF_ACCESS_AUD:-}
+    volumes:
+      - /home/development/dev:/repos:ro   # repos mounted read-only for index + get_file
+    ports:
+      - "127.0.0.1:8081:8081"             # host-side Claude Code reaches it here
+    networks: [backend, edge]              # backend=Postgres, edge=egress to Voyage
+    mem_limit: 2g
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:8081/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+
+  secrets-mcp:
+    build: ./services/secrets-mcp
+    <<: *restart
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:?set in .env}
+      MNEMO_TOKEN: ${MNEMO_TOKEN:-}
+      DEFAULT_PROJECT_ID: ${DEFAULT_PROJECT_ID:-default}
+      PORT: "8082"
+    ports:
+      - "127.0.0.1:8082:8082"
+    networks: [backend, edge]           # backend=Postgres; edge for the 127.0.0.1:8082 host publish.
+                                         # No tunnel here, so there's no reason to keep secrets-mcp
+                                         # off the shared `edge` net (a tunnel-fronted deployment
+                                         # would want it isolated on its own network instead).
+    mem_limit: 512m
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:8082/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # Eval/observability plane (Mnemosyne Stage 3 — the eval harness keystone).
+  # Pinned to v2 ON PURPOSE: v2 is a single web container backed by Postgres only.
+  # v3 mandates ClickHouse + Redis + S3 (heavy) — not wanted for this MVP. It runs its
+  # own Prisma migrations into the `langfuse` DB on first boot. LANGFUSE_INIT_* headlessly
+  # bootstraps the org/project/user + API keys so Promptfoo gets stable keys with no UI clicks.
+  langfuse:
+    image: langfuse/langfuse:2
+    <<: *restart
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${LANGFUSE_DB:-langfuse}
+      NEXTAUTH_URL: ${LANGFUSE_NEXTAUTH_URL:-http://localhost:3000}
+      # Next.js standalone binds to $HOSTNAME; Docker defaults it to the container id, so the app
+      # listens on the container's eth0 IP, not loopback — the in-container healthcheck (127.0.0.1)
+      # and the host port-forward both miss it. Pin 0.0.0.0 to listen on every interface.
+      HOSTNAME: "0.0.0.0"
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:?set in .env}
+      SALT: ${LANGFUSE_SALT:?set in .env}
+      ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:?set in .env}   # openssl rand -hex 32
+      TELEMETRY_ENABLED: "false"
+      LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+      # Headless bootstrap (first boot only) — stable keys for the Promptfoo CI gate.
+      LANGFUSE_INIT_ORG_ID: ${LANGFUSE_INIT_ORG_ID:-mnemosyne}
+      LANGFUSE_INIT_PROJECT_ID: ${LANGFUSE_INIT_PROJECT_ID:-mnemosyne-evals}
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_INIT_PROJECT_PUBLIC_KEY:-}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_INIT_PROJECT_SECRET_KEY:-}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_INIT_USER_EMAIL:-}
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_INIT_USER_PASSWORD:-}
+      LANGFUSE_INIT_USER_NAME: ${LANGFUSE_INIT_USER_NAME:-Mnemosyne}
+    ports:
+      - "127.0.0.1:3000:3000"        # loopback ONLY — reach directly on localhost, no tunnel needed
+    networks: [backend, edge]          # backend=Postgres; edge for NextAuth/egress
+    mem_limit: 2g
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3000/api/public/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s              # first boot runs DB migrations

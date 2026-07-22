@@ -1,0 +1,43 @@
+{
+  "name": "memory-mcp-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "migrate": "tsx src/db/migrate.ts",
+    "index:v2": "tsx src/db/create-v2-index.ts",
+    "index:decision": "tsx src/db/create-decision-index.ts",
+    "backfill:context": "tsx src/db/backfill-context.ts",
+    "backfill:summaries": "tsx src/db/backfill-summaries.ts",
+    "gold:migrate": "tsx src/db/migrate-gold.ts",
+    "distill-eval": "tsx src/db/distill-eval.ts",
+    "harvest-eval": "tsx src/db/harvest-eval.ts",
+    "consolidate": "tsx src/db/consolidate.ts",
+    "eval:compare": "tsx src/db/compare-runs.ts",
+    "bakeoff:blend": "tsx src/db/bakeoff-blend.ts",
+    "eval:record": "tsx test/run-eval.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "express": "^5.2.0",
+    "jose": "^6.2.3",
+    "pg": "^8.21.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.20.0",
+    "tsx": "^4.22.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
+  }
+}
